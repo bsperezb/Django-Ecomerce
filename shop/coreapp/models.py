@@ -1,5 +1,6 @@
 from django.db import models
 from django.conf import settings
+from django.shortcuts import reverse
 
 CATEGORY_CHOICES = (
     ('S', 'Shirt'),
@@ -10,25 +11,46 @@ CATEGORY_CHOICES = (
 
 LABEL_CHOICES = (
     ('P', 'primary'),
-    ('S', 'secundary'),
+    ('S', 'secondary'),
     ('D', 'danger'),
 )
 class Item(models.Model):
     title = models.CharField(max_length=100)
     price = models.FloatField()
+    discount_price = models.FloatField(blank=True, null=True)
     category = models.CharField(choices=CATEGORY_CHOICES, max_length=2, default='SW')
     label = models.CharField(choices=LABEL_CHOICES, max_length=1, default='D')
-    
+    slug = models.SlugField()
+    description = models.TextField()
 
     def __str__(self):
         return self.title
 
+    def get_absolute_url(self):
+        return reverse("coreapp:product", kwargs= {
+            'slug': self.slug
+        })
+
+    def get_add_to_cart_url(self):
+        return reverse("coreapp:add-to-cart", kwargs={
+            'slug': self.slug
+        })
+
+    def get_remove_from_cart_url(self):
+        return reverse("coreapp:remove_from_cart", kwargs={
+            'slug': self.slug
+        })
 
 class OrderItem(models.Model):
+    user = models.ForeignKey(settings.AUTH_USER_MODEL,
+                             on_delete=models.CASCADE,
+                             )
+    ordered = models.BooleanField(default=False)
     item = models.ForeignKey(Item, on_delete=models.CASCADE)
+    quantity = models.IntegerField(default=1) 
 
     def __str__(self):
-        return self.title
+        return f"{ self.quantity } of { self.item.title }"
 
 
 class Order(models.Model):
@@ -36,7 +58,7 @@ class Order(models.Model):
                              on_delete=models.CASCADE)
     items = models.ManyToManyField(OrderItem)
     start_date = models.DateField(auto_now_add=True)
-    ordered_Date = models.DateField()
+    ordered_date = models.DateField()
     ordered = models.BooleanField(default=False)
 
     def __str__(self):
