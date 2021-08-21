@@ -1,0 +1,58 @@
+{% load cart_template_tags %}
+
+{% if user.is_authenticated %}
+          <li class="nav-item">
+            <a href="https://www.facebook.com/mdbootstrap" class="nav-link waves-effect" target="_blank">
+              <i class="fab fa-facebook-f"></i>
+            </a>
+          </li>
+          <li class="nav-item">
+            <a href="{% url 'account_logout' %}" class="nav-link waves-effect" target="_blank">
+              <i class="fab fa-github mr-2"></i>
+            </a>
+          </li>
+<li class="nav-item">
+	<a class="nav-link waves-effect">
+		<span class="badge red z-depth-1 mr-1">{{ request.user|cart_item_count }}</span>
+		<i class="fas fa-shopping-cart"></i>
+		<span class="clearfix d-none d-sm-inline-block"> Cart </span>
+	</a>
+</li>
+	<li class="nav-item">
+	<div class="dropdown">
+		<a href="{% url 'account_login' %}" 
+		class="btn-floating btn-sm white dropdown-toggle waves-effect"
+		type="button" id="dropdownMenu3" 
+		data-toggle="dropdown"
+  		aria-haspopup="true"
+		aria-expanded="false" 
+		target="_blank">
+			<i class="fas fa-user-circle fa-2x"></i>
+		</a>
+		<br>
+  		<!--Menu-->
+  		<div class="dropdown-menu dropdown-primary p-0">
+			<div class="card pt-2 ">
+			<a href="{% url 'users:detail' request.user.username  %}">
+				<div class="text-center">
+					<i class="fas fa-user-tie fa-2x text-center"></i>
+					<div class="card-body">
+						<h6><b>{{ request.user.username }}</b> </h6>	
+						<h6><b>{{ request.user.email }}</b> </h6>	
+					</div>
+				<a class="dropdown-item" href="{% url 'account_logout'%}"><i class="fas fa-sign-out-alt"></i>&nbsp;&nbsp;Cerrar sesion</a>
+				</div>
+			</a>
+			</div>
+		</div>
+	</div>
+	</li>
+
+{% else %}
+	<li class="nav-item mr-3">
+    		<a class="nav-link waves-effect" href="{% url 'account_login'%}"><i class="fas fa-sign-in-alt"></i>&nbsp;&nbsp;INICIA</a>
+	</li>
+	<li class="nav-item">
+    		<a class="nav-link waves effect" href="{% url 'account_signup'%}"><i class="fas fa-user-plus"></i>&nbsp;&nbsp;REGÍSTRATE</a>
+	</li>
+{% endif %}

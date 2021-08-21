@@ -40,6 +40,7 @@ class Item(models.Model):
         return reverse("coreapp:remove_from_cart", kwargs={
             'slug': self.slug
         })
+        
 
 class OrderItem(models.Model):
     user = models.ForeignKey(settings.AUTH_USER_MODEL,
@@ -63,3 +64,4 @@ class Order(models.Model):
 
     def __str__(self):
         return self.user.username
+    
