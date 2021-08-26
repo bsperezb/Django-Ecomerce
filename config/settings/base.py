@@ -278,3 +278,8 @@ SOCIALACCOUNT_ADAPTER = "shop.users.adapters.SocialAccountAdapter"
 
 # Your stuff...
 # ------------------------------------------------------------------------------
+# Payment methods Keys (Wompi)
+# https://docs.wompi.co/docs/en/ambientes-y-llaves
+WOMPI_PUBLIC_KEY = 'pub_test_vC1FLb6lZ3yG2Y9w82NckAJqSFXPchHX'
+WOMPI_PRIVATE_KEY = 'prv_test_R6kUrYFWeeQYxPHSs7LkBXgKnvAoffVe'
+WOMPI_SANBOX_URL = 'https://sandbox.wompi.co/v1/transactions'
