@@ -9,8 +9,8 @@ from django.views.generic.base import View
 
 from config.settings.base import WOMPI_PUBLIC_KEY
 
-from .forms import CheckoutForm, CouponForm
-from .models import BillingAddress, Coupon, Item, Order, OrderItem, Payment
+from .forms import CheckoutForm, CouponForm, RefundForm
+from .models import BillingAddress, Coupon, Item, Order, OrderItem, Payment, Refund
 from .payment import (
     get_amount_by_id,
     get_reference_by_id,
@@ -158,6 +158,7 @@ def payment_redirect(request):
         order.billing_address = billing_address
         order.ordered = True
         order.payment = payment
+        order.reference = reference
         order.save()
 
         messages.success(request, "Your order was Successful!")
@@ -276,7 +277,37 @@ class AddCouponView(View):
                 order.coupon = get_coupon(self.request, code)
                 order.save()
                 messages.success(self.request, "Successfully added coupon")
-                return redirect("coreapp:checkout")
+                return redirect("coreapp:payment")
             except ObjectDoesNotExist:
                 messages.info(self.request, "You do not have an active order")
                 return redirect("core:payment")
+
+
+class RequestRefundView(View):
+    def get(self, *args, **kwargs):
+        form = RefundForm()
+        context = {"form": form}
+        return render(self.request, "request_refund.html", context)
+
+    def post(self, *args, **kwargs):
+        form = RefundForm(self.request.POST)
+        if form.is_valid():
+            reference = form.cleaned_data.get("reference")
+            message = form.cleaned_data.get("message")
+            email = form.cleaned_data.get("email")
+
+            try:
+                order = Order.objects.get(reference=reference)
+                order.refund_requested = True
+                order.save()
+
+                refund = Refund()
+                refund.order = order
+                refund.reason = message
+                refund.email = email
+                refund.save()
+                messages.info(self.request, "Your request was received")
+                return redirect("coreapp:request-refund")
+            except ObjectDoesNotExist:
+                messages.warning(self.request, "This order does not exist")
+                return redirect("coreapp:request-refund")
