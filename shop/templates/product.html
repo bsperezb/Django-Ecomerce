@@ -12,7 +12,7 @@
         <!--Grid column-->
         <div class="col-md-6 mb-4">
 
-          <img src="https://mdbootstrap.com/img/Photos/Horizontal/E-commerce/Products/14.jpg" class="img-fluid" alt="">
+          <img src="{{ item.image.url }}" class="img-fluid" alt="">
 
         </div>
         <!--Grid column-->
@@ -60,7 +60,7 @@
               </a>
 
               <a href="{{ object.get_remove_from_cart_url }}" class="btn btn-danger btn-md my-0 p" >
-                Remove from cart 
+                Remove from cart
                 <i class="fas fa-trash-alt ml-1"></i>
               </a>
 
