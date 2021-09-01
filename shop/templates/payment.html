@@ -12,8 +12,6 @@
 
       <!--Grid row-->
 	<div class="row">
-
-
       <div class="col-md-12 mb-4">
 
         <!-- Heading -->
@@ -22,23 +20,17 @@
           <span class="badge badge-secondary badge-pill">{{ order.items.count }}</span>
         </h4>
         <!-- /Heading -->
-
-        <!-- Cart -->
+        <!-- Cart table -->
 
         {% include 'table-products-1.html' %}
 
-        <!-- Promo code -->
-        <!-- Promo code -->
-        <!-- Cart -->
-
+        <!-- Cart table -->
       </div>
-
         <!--Grid column-->
     <div class="col-md-12 mb-4">
 
           <!--Card-->
-			<div class="">
-
+			<div class="container">
 				<form class="text-center">
 					<script
 						src="https://checkout.wompi.co/widget.js"
@@ -51,16 +43,12 @@
 						>
 					</script>
 				</form>
-
 			</div>
           <!--Card-->
 		</div>
         <!--Grid column-->
 	</div>
       <!--Grid row-->
-
 </div>
-
-
 
 {% endblock content %}

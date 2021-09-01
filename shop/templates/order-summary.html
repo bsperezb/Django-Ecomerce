@@ -1,5 +1,7 @@
 {% extends 'base.html' %}
 
+{% load humanize %}
+
 {% block content %}
 
 <div class="container py-3">
@@ -20,7 +22,7 @@
 		<tr>
 			<th scope="row">1</th>
 			<td>{{ order_item.item.title }}</td>
-			<td>{{ order_item.item.price }}</td>
+			<td>{{ order_item.item.price|intcomma }}</td>
 			<td>
 				<a href="{% url 'coreapp:remove-single-item-from-cart' order_item.item.slug %}"><i class="fas fa-minus mr-2"></i></a>
 				{{ order_item.quantity }}
@@ -29,9 +31,9 @@
 			<td>
 				{% if order_item.item.discount_price %}
 					${{ order_item.get_total_discount_item_price }}
-					Saving <span class="badge bg-primary">{{ order_item.get_amount_saved }}</span>
+					Saving <span class="badge bg-primary">{{ order_item.get_amount_saved|intcomma }}</span>
 				{% else %}
-					${{ order_item.get_total_item_price }}
+					${{ order_item.get_total_item_price|intcomma }}
 				{% endif %}
 				<a style="color:red" href="{% url 'coreapp:remove_from_cart' order_item.item.slug %}">
 					<i class="fas fa-trash float-right"></i>
@@ -54,7 +56,7 @@
 
 	<tr>
 		<td colspan="4"><b>Order total</b></td>
-		<td><b>${{ object.get_total }}</b></td>
+		<td><b>${{ object.get_total|intcomma }}</b></td>
 	</tr>
 	<tr >
 		<td colspan="5">

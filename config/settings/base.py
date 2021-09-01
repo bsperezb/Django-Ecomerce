@@ -3,8 +3,6 @@ Base settings to build other settings files upon.
 """
 from pathlib import Path
 
-from django.template import library
-
 import environ
 
 ROOT_DIR = Path(__file__).resolve(strict=True).parent.parent.parent
@@ -72,12 +70,12 @@ THIRD_PARTY_APPS = [
     "allauth.account",
     "allauth.socialaccount",
     "django_countries",
+    "django.contrib.humanize",
 ]
 
 LOCAL_APPS = [
     "shop.users.apps.UsersConfig",
     # Your stuff: custom apps go here
-
     "shop.coreapp",
 ]
 # https://docs.djangoproject.com/en/dev/ref/settings/#installed-apps
@@ -169,8 +167,8 @@ TEMPLATES = [
         # https://docs.djangoproject.com/en/dev/ref/settings/#template-dirs
         "DIRS": [str(APPS_DIR / "templates")],
         "OPTIONS": {
-            #My TemplateTags
-            "libraries":{
+            # My TemplateTags
+            "libraries": {
                 "cart_template_tags": "shop.templatetags.cart_template_tags",
             },
             # https://docs.djangoproject.com/en/dev/ref/settings/#template-loaders
@@ -280,6 +278,6 @@ SOCIALACCOUNT_ADAPTER = "shop.users.adapters.SocialAccountAdapter"
 # ------------------------------------------------------------------------------
 # Payment methods Keys (Wompi)
 # https://docs.wompi.co/docs/en/ambientes-y-llaves
-WOMPI_PUBLIC_KEY = 'pub_test_vC1FLb6lZ3yG2Y9w82NckAJqSFXPchHX'
-WOMPI_PRIVATE_KEY = 'prv_test_R6kUrYFWeeQYxPHSs7LkBXgKnvAoffVe'
-WOMPI_SANBOX_URL = 'https://sandbox.wompi.co/v1/transactions'
+WOMPI_PUBLIC_KEY = "pub_test_vC1FLb6lZ3yG2Y9w82NckAJqSFXPchHX"
+WOMPI_PRIVATE_KEY = "prv_test_R6kUrYFWeeQYxPHSs7LkBXgKnvAoffVe"
+WOMPI_SANBOX_URL = "https://sandbox.wompi.co/v1/transactions"

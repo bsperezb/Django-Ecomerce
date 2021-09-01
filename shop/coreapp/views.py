@@ -10,7 +10,7 @@ from django.views.generic.base import View
 from config.settings.base import WOMPI_PUBLIC_KEY
 
 from .forms import CheckoutForm, CouponForm, RefundForm
-from .models import BillingAddress, Coupon, Item, Order, OrderItem, Payment, Refund
+from .models import Address, Coupon, Item, Order, OrderItem, Payment, Refund
 from .payment import (
     get_amount_by_id,
     get_reference_by_id,
@@ -31,7 +31,6 @@ class OrderSummaryView(LoginRequiredMixin, View):
         try:
             order = Order.objects.get(user=self.request.user, ordered=False)
             context = {"object": order}
-
             # import ipdb;ipdb.set_trace()
 
             return render(self.request, "order-summary.html", context)
@@ -45,12 +44,33 @@ class ItemDetailView(DetailView):
     template_name = "product.html"
 
 
+def is_valid_form(values):
+    valid = True
+    for field in values:
+        if field == "":
+            valid = False
+    return valid
+
+
 class CheckoutView(View):
     def get(self, *args, **kwargs):
         try:
             form = CheckoutForm()
             order = Order.objects.get(user=self.request.user, ordered=False)
             context = {"form": form, "order": order, "DISPLAY_FORM": False}
+
+            shipping_address_qs = Address.objects.filter(
+                user=self.request.user, address_type="S", default=True
+            )
+            if shipping_address_qs.exists():
+                context.update({"default_shipping_address": shipping_address_qs[0]})
+
+            billing_address_qs = Address.objects.filter(
+                user=self.request.user, address_type="B", default=True
+            )
+            if billing_address_qs.exists():
+                context.update({"default_billing_address": billing_address_qs[0]})
+
             return render(self.request, "checkout-page.html", context)
         except ObjectDoesNotExist:
             messages.info(self.request, "You don't have an active order")
@@ -58,37 +78,121 @@ class CheckoutView(View):
 
     def post(self, *args, **kwargs):
         form = CheckoutForm(self.request.POST or None)
-
+        # import ipdb; ipdb.set_trace()
         try:
             order = Order.objects.get(user=self.request.user, ordered=False)
-
             if form.is_valid():
 
-                # TODO delete residual billing addres
-                # try:
-                #    BillingAddress.objects.get(user=requests.user).delete()
-                # except :
-                #   pass
+                # Shipping address form
+                use_default_shipping = form.cleaned_data.get("use_default_shipping")
+                if use_default_shipping:
+                    print("Use the defaul shipping address")
+                    address_qs = Address.objects.filter(
+                        user=self.request.user, address_type="S", default=True
+                    )
+                    if address_qs.exists():
+                        shipping_address = address_qs[0]
+                        order.shipping_address = shipping_address
+                        order.save()
 
-                street_address = form.cleaned_data.get("street_address")
-                apartment_address = form.cleaned_data.get("apartment_address")
-                country = form.cleaned_data.get("country")
-                zip = form.cleaned_data.get("zip")
-                # Then add functionality for this fields
-                # same_shipping_address = form.cleaned_data.get('same_shipping_address')
-                # save_info = form.cleaned_data.get('save_info')
-                # payment_option = form.cleaned_data.get("payment_option")
-                billing_address = BillingAddress(
-                    user=self.request.user,
-                    street_address=street_address,
-                    apartment_address=apartment_address,
-                    country=country,
-                    zip=zip,
-                )
-                billing_address.save()
-                order.billing_address = billing_address
-                order.save()
-                # TODO: Add redirect to de selected payment option (stripe and other)
+                    else:
+                        messages.info(self.request, "No available")
+                        return redirect("coreapp:checkout")
+                else:
+                    shipping_address1 = form.cleaned_data.get("shipping_address")
+                    shipping_address2 = form.cleaned_data.get("shipping_address2")
+                    shipping_country = form.cleaned_data.get("shipping_country")
+                    shipping_zip = form.cleaned_data.get("shipping_zip")
+                    # payment_option = form.cleaned_data.get("payment_option")
+                    if is_valid_form(
+                        [shipping_address1, shipping_zip, shipping_country]
+                    ):
+
+                        shipping_address = Address(
+                            user=self.request.user,
+                            street_address=shipping_address1,
+                            apartment_address=shipping_address2,
+                            country=shipping_country,
+                            zip=shipping_zip,
+                            address_type="S",
+                        )
+                        shipping_address.save()
+                        order.shipping_address = shipping_address
+                        order.save()
+
+                        set_default_shipping = form.cleaned_data.get(
+                            "set_default_shipping"
+                        )
+                        if set_default_shipping:
+                            shipping_address.default = True
+                            shipping_address.save()
+                    else:
+                        messages.info(
+                            self.request,
+                            "please fill in the requirement shipping address fields",
+                        )
+                    # end Shipping address form
+
+                # Billing address form
+                use_default_billing = form.cleaned_data.get("use_default_billing")
+                same_billing_address = form.cleaned_data.get("same_billing_address")
+
+                if same_billing_address:
+                    billing_address = shipping_address
+                    billing_address.pk = None
+                    billing_address.save()
+                    billing_address.address_type = "B"
+                    billing_address.save()
+                    order.billing_address = billing_address
+                    order.save()
+
+                elif use_default_billing:
+                    address_qs = Address.objects.filter(
+                        user=self.request.user, address_type="B", default=True
+                    )
+                    if address_qs.exists():
+                        billing_address = address_qs[0]
+                        order.billing_address = billing_address
+                        order.save()
+
+                    else:
+                        messages.info(
+                            self.request, "No default billing addres available"
+                        )
+                        return redirect("coreapp:checkout")
+                else:
+                    print("user is entering a new billing address")
+                    billing_address1 = form.cleaned_data.get("billing_address")
+                    billing_address2 = form.cleaned_data.get("billing_address2")
+                    billing_country = form.cleaned_data.get("billing_country")
+                    billing_zip = form.cleaned_data.get("billing_zip")
+                    if is_valid_form([billing_address1, billing_zip, billing_country]):
+
+                        billing_address = Address(
+                            user=self.request.user,
+                            street_address=billing_address1,
+                            apartment_address=billing_address2,
+                            country=billing_country,
+                            zip=billing_zip,
+                            address_type="B",
+                        )
+                        billing_address.save()
+                        order.billing_address = billing_address
+                        order.save()
+
+                        set_default_billing = form.cleaned_data.get(
+                            "set_default_billing"
+                        )
+                        if set_default_billing:
+                            billing_address.default = True
+                            billing_address.save()
+                    else:
+                        messages.info(
+                            self.request,
+                            "please fill in the requirement billing address fields",
+                        )
+                    # End Billing addres form
+
                 return redirect("coreapp:payment")
             messages.warning(self.request, "Failed checkout")
             return redirect("coreapp:checkout")
@@ -136,7 +240,7 @@ def payment_redirect(request):
     order = Order.objects.get(user=request.user, ordered=False, reference=reference)
     # billing_address verification
     try:
-        billing_address = BillingAddress.objects.filter(user=request.user)[0]
+        billing_address = Address.objects.filter(user=request.user)[0]
     except ObjectDoesNotExist:
         messages.warning(request, "Your may add a billing addres")
         return redirect("coreapp:checkout")
@@ -161,7 +265,10 @@ def payment_redirect(request):
         order.reference = reference
         order.save()
 
-        messages.success(request, "Your order was Successful!")
+        messages.success(
+            request,
+            f"Your order was Successful! \nthis is your payment reference: {reference}",
+        )
 
         return redirect("coreapp:home")
 
@@ -264,7 +371,7 @@ def get_coupon(request, code):
         return coupon
     except ObjectDoesNotExist:
         messages.info(request, "This coupon does not exist")
-        return redirect("core:checkout")
+        return False
 
 
 class AddCouponView(View):
@@ -274,13 +381,15 @@ class AddCouponView(View):
             try:
                 code = form.cleaned_data.get("code")
                 order = Order.objects.get(user=self.request.user, ordered=False)
-                order.coupon = get_coupon(self.request, code)
-                order.save()
-                messages.success(self.request, "Successfully added coupon")
+                if get_coupon(self.request, code):
+                    order.coupon = get_coupon(self.request, code)
+                    order.save()
+                    messages.success(self.request, "Successfully added coupon")
                 return redirect("coreapp:payment")
+
             except ObjectDoesNotExist:
                 messages.info(self.request, "You do not have an active order")
-                return redirect("core:payment")
+                return redirect("coreapp:payment")
 
 
 class RequestRefundView(View):

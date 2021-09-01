@@ -54,8 +54,9 @@
     <div class="container">
 
       <!-- Brand -->
-      <a class="navbar-brand waves-effect" href="https://mdbootstrap.com/docs/jquery/" target="_blank">
-        <strong class="blue-text" >SHOP</strong>
+      <a class="navbar-brand waves-effect" href="{% url 'coreapp:home' %}" >
+        <i class="fas fa-store center" style="color: #2e86c1 ; font-size:30px;"></i>
+        <strong class="blue-text" style="font-size:18px;">SHOP</strong><br>
       </a>
 
       <!-- Collapse -->
@@ -70,12 +71,12 @@
         <!-- Left -->
         <ul class="navbar-nav mr-auto">
           <li class="nav-item">
-            <a class="nav-link waves-effect" href="{% url 'coreapp:home'%}">Home
-              <span class="sr-only">(current)</span>
-            </a>
+            <a class="nav-link waves-effect" href="{% url 'coreapp:checkout'%}" target="_self">Checkout</a>
           </li>
           <li class="nav-item">
-            <a class="nav-link waves-effect" href="{% url 'coreapp:checkout'%}" target="_self">Checkout</a>
+            <a class="nav-link waves-effect" href="{% url 'about'%}">About
+              <span class="sr-only">(current)</span>
+            </a>
           </li>
         </ul>
 
@@ -106,48 +107,48 @@
   <!-- EndMessages -->
   <!-- Navbar -->
   {% block content %}
-  
+
   {% endblock content %}
   </div>
   <!--Main layout-->
 
   <!--Footer-->
   <footer class="page-footer text-center font-small mt-4 wow fadeIn">
-    
+
     <hr class="my-4">
 
 
     <!-- Social icons -->
     <div class="pb-4">
-      <a href="https://www.facebook.com/mdbootstrap" target="_blank">
+      <a href="" target="">
         <i class="fab fa-facebook-f mr-3"></i>
       </a>
 
-      <a href="https://twitter.com/MDBootstrap" target="_blank">
+      <a href="" target="">
         <i class="fab fa-twitter mr-3"></i>
       </a>
 
-      <a href="https://www.youtube.com/watch?v=7MUISDJ5ZZ4" target="_blank">
+      <a href="" target="">
         <i class="fab fa-youtube mr-3"></i>
       </a>
 
-      <a href="https://plus.google.com/u/0/b/107863090883699620484" target="_blank">
+      <a href="" target="">
         <i class="fab fa-google-plus-g mr-3"></i>
       </a>
 
-      <a href="https://dribbble.com/mdbootstrap" target="_blank">
+      <a href="" target="">
         <i class="fab fa-dribbble mr-3"></i>
       </a>
 
-      <a href="https://pinterest.com/mdbootstrap" target="_blank">
+      <a href="" target="">
         <i class="fab fa-pinterest mr-3"></i>
       </a>
 
-      <a href="https://github.com/mdbootstrap/bootstrap-material-design" target="_blank">
+      <a href="https://github.com/bsperezb" target="_blank">
         <i class="fab fa-github mr-3"></i>
       </a>
 
-      <a href="http://codepen.io/mdbootstrap/" target="_blank">
+      <a href="" target="">
         <i class="fab fa-codepen mr-3"></i>
       </a>
     </div>
@@ -177,6 +178,9 @@
     new WOW().init();
 
   </script>
+  {% block extra_script %}
+
+  {% endblock extra_script %}
 </body>
 
 </html>

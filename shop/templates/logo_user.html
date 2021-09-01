@@ -2,12 +2,7 @@
 
 {% if user.is_authenticated %}
           <li class="nav-item">
-            <a href="https://www.facebook.com/mdbootstrap" class="nav-link waves-effect" target="_blank">
-              <i class="fab fa-facebook-f"></i>
-            </a>
-          </li>
-          <li class="nav-item">
-            <a href="{% url 'account_logout' %}" class="nav-link waves-effect" target="_blank">
+            <a href="https://github.com/bsperezb" class="nav-link waves-effect" target="_blank">
               <i class="fab fa-github mr-2"></i>
             </a>
           </li>
@@ -20,12 +15,12 @@
 </li>
 	<li class="nav-item">
 	<div class="dropdown">
-		<a href="{% url 'account_login' %}" 
+		<a href="{% url 'account_login' %}"
 		class="btn-floating btn-sm white dropdown-toggle waves-effect"
-		type="button" id="dropdownMenu3" 
+		type="button" id="dropdownMenu3"
 		data-toggle="dropdown"
   		aria-haspopup="true"
-		aria-expanded="false" 
+		aria-expanded="false"
 		target="_blank">
 			<i class="fas fa-user-circle fa-2x"></i>
 		</a>
@@ -37,9 +32,10 @@
 				<div class="text-center">
 					<i class="fas fa-user-tie fa-2x text-center"></i>
 					<div class="card-body">
-						<h6><b>{{ request.user.username }}</b> </h6>	
-						<h6><b>{{ request.user.email }}</b> </h6>	
+						<h6><b>{{ request.user.username }}</b> </h6>
+						<h6><b>{{ request.user.email }}</b> </h6>
 					</div>
+				<a class="dropdown-item" href="{% url 'coreapp:request-refund'%}"><i class="fas fa-undo"></i>&nbsp;&nbsp;Refound</a>
 				<a class="dropdown-item" href="{% url 'account_logout'%}"><i class="fas fa-sign-out-alt"></i>&nbsp;&nbsp;Cerrar sesion</a>
 				</div>
 			</a>

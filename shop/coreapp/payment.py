@@ -5,6 +5,7 @@ import requests
 from django.core.exceptions import ObjectDoesNotExist
 
 from config.settings.base import WOMPI_PRIVATE_KEY, WOMPI_SANBOX_URL
+from shop.coreapp.models import Order
 
 
 def get_status_reference(reference):
@@ -50,7 +51,7 @@ def get_reference_by_id(id):
         resp_json = resp.json()
         return resp_json["data"]["reference"]
     except ObjectDoesNotExist:
-        return "Something went wrong, try again."
+        return "Id does not exist"
 
 
 def get_amount_by_id(id):
@@ -62,10 +63,15 @@ def get_amount_by_id(id):
         resp_json = resp.json()
         return resp_json["data"]["amount_in_cents"]
     except ObjectDoesNotExist:
-        return "Something went wrong, try again."
+        return "Id doesn't exist"
 
 
 def random_reference():
+
     reference = "".join(random.choices(string.ascii_uppercase + string.digits, k=12))
-    # TODO compara referencia en base de datos y si es la misma, cambiar.
-    return reference
+    try:
+        reference_db = Order.objects.get(ordered=True, reference=reference)
+        if reference_db.exists():
+            random_reference()
+    except ObjectDoesNotExist:
+        return reference
