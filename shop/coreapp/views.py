@@ -23,7 +23,7 @@ from .payment import (
 class HomeView(ListView):
     model = Item
     template_name = "home.html"
-    paginate_by = 10
+    paginate_by = 8
 
 
 class OrderSummaryView(LoginRequiredMixin, View):
@@ -52,7 +52,7 @@ def is_valid_form(values):
     return valid
 
 
-class CheckoutView(View):
+class CheckoutView(LoginRequiredMixin, View):
     def get(self, *args, **kwargs):
         try:
             form = CheckoutForm()
@@ -202,7 +202,7 @@ class CheckoutView(View):
             return redirect("coreapp:order-summary")
 
 
-class PaymentView(View):
+class PaymentView(LoginRequiredMixin, View):
     def get(self, *args, **kwargs):
 
         try:
