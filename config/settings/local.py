@@ -11,7 +11,7 @@ SECRET_KEY = env(
     default="tt4scoFIa73Stea2rIoGF9pwXx89BoVt5zYasahjmjPyuyu9OnVRBOvZHBLKRN46",
 )
 # https://docs.djangoproject.com/en/dev/ref/settings/#allowed-hosts
-ALLOWED_HOSTS = ["localhost", "0.0.0.0", "127.0.0.1"]
+ALLOWED_HOSTS = ["localhost", "0.0.0.0", "127.0.0.1", "django-commerce.ngrok.io"]
 
 # CACHES
 # ------------------------------------------------------------------------------

@@ -8,9 +8,10 @@ from django.views.generic import DetailView, ListView
 from django.views.generic.base import View
 
 from config.settings.base import WOMPI_PUBLIC_KEY
+from shop.coreapp.session import random_session_id
 
 from .forms import CheckoutForm, CouponForm, RefundForm
-from .models import Address, Coupon, Item, Order, OrderItem, Payment, Refund
+from .models import Address, Coupon, Item, Order, OrderItem, Payment, Refund, Session
 from .payment import (
     get_amount_by_id,
     get_reference_by_id,
@@ -26,10 +27,20 @@ class HomeView(ListView):
     paginate_by = 8
 
 
-class OrderSummaryView(LoginRequiredMixin, View):
+class OrderSummaryView(View):
     def get(self, *args, **kwargs):
         try:
-            order = Order.objects.get(user=self.request.user, ordered=False)
+            session_number = self.request.session.get(
+                "session_number", random_session_id()
+            )
+            session, created = Session.objects.get_or_create(
+                session_number=session_number
+            )
+
+            if self.request.user.is_authenticated:
+                order = Order.objects.get(user=self.request.user, ordered=False)
+            else:
+                order = Order.objects.get(session=session, ordered=False)
             context = {"object": order}
             # import ipdb;ipdb.set_trace()
 
@@ -54,6 +65,38 @@ def is_valid_form(values):
 
 class CheckoutView(LoginRequiredMixin, View):
     def get(self, *args, **kwargs):
+        session_number = self.request.session.get("session_number", random_session_id())
+        session, created = Session.objects.get_or_create(session_number=session_number)
+        # if not Order.objects.filter(session=session, user=self.request.user, ordered=False):
+        try:
+            order = Order.objects.get(session=session, ordered=False)
+
+            try:
+                old_order = Order.objects.get(user=self.request.user, ordered=False)
+                old_order.delete()
+
+                for order_item in OrderItem.objects.filter(
+                    user=self.request.user, ordered=False
+                ):
+                    order_item.delete()
+
+            except ObjectDoesNotExist:
+                # there is no previous order
+                pass
+            # clean order session
+            order.user = self.request.user
+            order.session = None
+            order.save()
+            # clearn order_item session
+            for order_item in OrderItem.objects.filter(session=session, ordered=False):
+                order_item.user = self.request.user
+                order_item.session = None
+                order_item.save()
+            # import ipdb; ipdb.set_trace()
+        except ObjectDoesNotExist:
+            # there is no a objects in session
+            pass
+
         try:
             form = CheckoutForm()
             order = Order.objects.get(user=self.request.user, ordered=False)
@@ -285,84 +328,176 @@ def payment_redirect(request):
         return redirect("coreapp:order-summary")
 
 
-@login_required
 def add_to_cart(request, slug):
     item = get_object_or_404(Item, slug=slug)
-    order_item, created = OrderItem.objects.get_or_create(
-        item=item, user=request.user, ordered=False
-    )
-    order_qs = Order.objects.filter(user=request.user, ordered=False)
-    if order_qs.exists():
-        order = order_qs[0]
-        # verificar el orden de los items en order
-        if order.items.filter(item__slug=item.slug).exists():
-            order_item.quantity += 1
-            order_item.save()
-            messages.info(request, "This item cuantity was updated")
-            return redirect("coreapp:order-summary")
+
+    if request.user.is_authenticated:
+        order_item, created = OrderItem.objects.get_or_create(
+            item=item, user=request.user, ordered=False
+        )
+        order_qs = Order.objects.filter(user=request.user, ordered=False)
+        if order_qs.exists():
+            order = order_qs[0]
+            # verificar el orden de los items en order
+            if order.items.filter(item__slug=item.slug).exists():
+                order_item.quantity += 1
+                order_item.save()
+                messages.info(request, "This item cuantity was updated")
+                return redirect("coreapp:order-summary")
+            else:
+                messages.info(request, "This item was added to your car")
+                order.items.add(order_item)
+                return redirect("coreapp:order-summary")
         else:
-            messages.info(request, "This item was added to your car")
+            ordered_date = timezone.now()
+            order = Order.objects.create(user=request.user, ordered_date=ordered_date)
             order.items.add(order_item)
+            messages.info(request, "This item was added to your car")
             return redirect("coreapp:order-summary")
+    # if no autheticatte
     else:
-        ordered_date = timezone.now()
-        order = Order.objects.create(user=request.user, ordered_date=ordered_date)
-        order.items.add(order_item)
-        messages.info(request, "This item was added to your car")
-        return redirect("coreapp:order-summary")
+
+        session_number = request.session.get("session_number", random_session_id())
+        session, created = Session.objects.get_or_create(session_number=session_number)
+        request.session["session_number"] = session.session_number
+        # import ipdb; ipdb.set_trace()
+
+        order_item, created = OrderItem.objects.get_or_create(
+            item=item, session=session, ordered=False
+        )
+        order_qs = Order.objects.filter(session=session, ordered=False)
+        if order_qs.exists():
+            order = order_qs[0]
+            # verificar el orden de los items en order
+            if order.items.filter(item__slug=item.slug).exists():
+                order_item.quantity += 1
+                order_item.save()
+                messages.info(request, "This item cuantity was updated")
+                return redirect("coreapp:order-summary")
+            else:
+                messages.info(request, "This item was added to your car")
+                order.items.add(order_item)
+                return redirect("coreapp:order-summary")
+        else:
+            ordered_date = timezone.now()
+            order = Order.objects.create(session=session, ordered_date=ordered_date)
+            order.items.add(order_item)
+            messages.info(request, "This item was added to your car")
+            return redirect("coreapp:order-summary")
 
 
-@login_required
 def remove_from_cart(request, slug):
     item = get_object_or_404(Item, slug=slug)
-    order_qs = Order.objects.filter(user=request.user, ordered=False)
-    if order_qs.exists():
-        order = order_qs[0]
-        # verificar si el item ordenado está en la orden
-        if order.items.filter(item__slug=item.slug).exists():
-            order_item = OrderItem.objects.filter(
-                item=item, user=request.user, ordered=False
-            )[0]
-            order.items.remove(order_item)
-            order_item.delete()
-            messages.info(request, "This item was remove from your cart")
-            return redirect("coreapp:order-summary")
+
+    if request.user.is_authenticated:
+        order_qs = Order.objects.filter(user=request.user, ordered=False)
+
+        if order_qs.exists():
+            order = order_qs[0]
+            # verificar si el item ordenado está en la orden
+
+            if order.items.filter(item__slug=item.slug).exists():
+                order_item = OrderItem.objects.filter(
+                    item=item, user=request.user, ordered=False
+                )[0]
+                order.items.remove(order_item)
+                order_item.delete()
+                messages.info(request, "This item was remove from your cart")
+                return redirect("coreapp:order-summary")
+
+            else:
+                # add a message saying the user doesn't have a item
+                messages.info(request, "This item was not in your cart")
+                return redirect("coreapp:product", slug=slug)
+
         else:
-            # add a message saying the user doesn't have a item
-            messages.info(request, "This item was not in your cart")
+            messages.info(request, "yo don't have an active order")
             return redirect("coreapp:product", slug=slug)
 
     else:
-        messages.info(request, "yo don't have an active order")
-        return redirect("coreapp:product", slug=slug)
+        session_number = request.session.get("session_number", random_session_id())
+        session, created = Session.objects.get_or_create(session_number=session_number)
+
+        order_qs = Order.objects.filter(session=session, ordered=False)
+
+        if order_qs.exists():
+            order = order_qs[0]
+            # verificar si el item ordenado está en la orden
+
+            if order.items.filter(item__slug=item.slug).exists():
+                order_item = OrderItem.objects.filter(
+                    item=item, session=session, ordered=False
+                )[0]
+                order.items.remove(order_item)
+                order_item.delete()
+                messages.info(request, "This item was remove from your cart")
+                return redirect("coreapp:order-summary")
+
+            else:
+                # add a message saying the user doesn't have a item
+                messages.info(request, "This item was not in your cart")
+                return redirect("coreapp:product", slug=slug)
+
+        else:
+            messages.info(request, "yo don't have an item in your cart")
+            return redirect("coreapp:product", slug=slug)
 
 
-@login_required
 def remove_single_item_from_cart(request, slug):
     item = get_object_or_404(Item, slug=slug)
-    order_qs = Order.objects.filter(user=request.user, ordered=False)
-    if order_qs.exists():
-        order = order_qs[0]
-        # verificar si el item ordenado está en la orden
-        if order.items.filter(item__slug=item.slug).exists():
-            order_item = OrderItem.objects.filter(
-                item=item, user=request.user, ordered=False
-            )[0]
-            if order_item.quantity > 1:
-                order_item.quantity -= 1
-                order_item.save()
-            else:
-                order.items.remove(order_item)
-            messages.info(request, "This item quantity was update from your cart")
-            return redirect("coreapp:order-summary")
-        else:
-            # add a message saying the user doesn't have a item
-            messages.info(request, "This item was not in your cart")
-            return redirect("coreapp:product", slug=slug)
+    # import ipdb; ipdb.set_trace()
 
+    if request.user.is_authenticated:
+        order_qs = Order.objects.filter(user=request.user, ordered=False)
+        if order_qs.exists():
+            order = order_qs[0]
+            # verificar si el item ordenado está en la orden
+            if order.items.filter(item__slug=item.slug).exists():
+                order_item = OrderItem.objects.get(
+                    item=item, user=request.user, ordered=False
+                )
+                if order_item.quantity > 1:
+                    order_item.quantity -= 1
+                    order_item.save()
+                else:
+                    order.items.remove(order_item)
+                messages.info(request, "This item quantity was update from your cart")
+                return redirect("coreapp:order-summary")
+            else:
+                # add a message saying the user doesn't have a item
+                messages.info(request, "This item was not in your cart")
+                return redirect("coreapp:product", slug=slug)
+
+        else:
+            messages.info(request, "yo don't have an active order")
+            return redirect("coreapp:product", slug=slug)
     else:
-        messages.info(request, "yo don't have an active order")
-        return redirect("coreapp:product", slug=slug)
+        session_number = request.session.get("session_number", random_session_id())
+        session, created = Session.objects.get_or_create(session_number=session_number)
+
+        order_qs = Order.objects.filter(session=session, ordered=False)
+        if order_qs.exists():
+            order = order_qs[0]
+            # verificar si el item ordenado está en la orden
+            if order.items.filter(item__slug=item.slug).exists():
+                order_item = OrderItem.objects.filter(
+                    item=item, session=session, ordered=False
+                )[0]
+                if order_item.quantity > 1:
+                    order_item.quantity -= 1
+                    order_item.save()
+                else:
+                    order.items.remove(order_item)
+                messages.info(request, "This item quantity was update from your cart")
+                return redirect("coreapp:order-summary")
+            else:
+                # add a message saying the user doesn't have a item
+                messages.info(request, "This item was not in your cart")
+                return redirect("coreapp:product", slug=slug)
+
+        else:
+            messages.info(request, "yo don't have an active order")
+            return redirect("coreapp:product", slug=slug)
 
 
 def get_coupon(request, code):
@@ -420,3 +555,41 @@ class RequestRefundView(View):
             except ObjectDoesNotExist:
                 messages.warning(self.request, "This order does not exist")
                 return redirect("coreapp:request-refund")
+
+
+def setting_account_order(request):
+    # TODO Create Funtion for checkout and this view
+    # TODO Create in session.py  a funtion given request, return session object
+    session_number = request.session.get("session_number", random_session_id())
+    session, created = Session.objects.get_or_create(session_number=session_number)
+    # if not Order.objects.filter(session=session, user=self.request.user, ordered=False):
+    try:
+        # if Order.objects.filter(session=session, ordered=False).exists():
+        order = Order.objects.get(session=session, ordered=False)
+
+        try:
+            old_order = Order.objects.get(user=request.user, ordered=False)
+            old_order.delete()
+
+            for order_item in OrderItem.objects.filter(
+                user=request.user, ordered=False
+            ):
+                order_item.delete()
+
+        except ObjectDoesNotExist:
+            # there is no previous order
+            pass
+        # clean order session
+        order.user = request.user
+        order.session = None
+        order.save()
+        # clearn order_item session
+        for order_item in OrderItem.objects.filter(session=session, ordered=False):
+            order_item.user = request.user
+            order_item.session = None
+            order_item.save()
+        # import ipdb; ipdb.set_trace()
+    except ObjectDoesNotExist:
+        # there is no a objects in session
+        pass
+    return redirect("coreapp:home")

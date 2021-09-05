@@ -48,12 +48,14 @@ class Item(models.Model):
 
 class OrderItem(models.Model):
     user = models.ForeignKey(
-        settings.AUTH_USER_MODEL,
-        on_delete=models.CASCADE,
+        settings.AUTH_USER_MODEL, on_delete=models.CASCADE, blank=True, null=True
     )
     ordered = models.BooleanField(default=False)
     item = models.ForeignKey(Item, on_delete=models.CASCADE)
     quantity = models.IntegerField(default=1)
+    session = models.ForeignKey(
+        "Session", on_delete=models.SET_NULL, blank=True, null=True
+    )
 
     def __str__(self):
         return f"{ self.quantity } of { self.item.title }"
@@ -74,7 +76,9 @@ class OrderItem(models.Model):
 
 
 class Order(models.Model):
-    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.CASCADE, null=True, blank=True
+    )
     items = models.ManyToManyField(OrderItem)
     start_date = models.DateField(auto_now_add=True)
     ordered_date = models.DateField()
@@ -104,9 +108,15 @@ class Order(models.Model):
     received = models.BooleanField(default=False)
     refund_requested = models.BooleanField(default=False)
     refund_granted = models.BooleanField(default=False)
+    session = models.ForeignKey(
+        "Session", on_delete=models.SET_NULL, blank=True, null=True
+    )
 
     def __str__(self):
-        return self.user.username
+        if self.user:
+            return self.user.username
+        else:
+            return self.session.session_number
 
     def get_total(self):
         total = 0
@@ -167,3 +177,11 @@ class Refund(models.Model):
 
     def __str__(self):
         return f"{self.pk}"
+
+
+class Session(models.Model):
+    session_number = models.CharField(max_length=30)
+    start_date = models.DateField(auto_now_add=True)
+
+    def __str__(self):
+        return self.session_number

@@ -1,5 +1,7 @@
+{% load cart_template_tags %}
 
 {% load static %}
+
 <!DOCTYPE html>
 <html lang="en">
 
@@ -70,9 +72,19 @@
 
         <!-- Left -->
         <ul class="navbar-nav mr-auto">
+        {% if user.is_authenticated %}
           <li class="nav-item">
             <a class="nav-link waves-effect" href="{% url 'coreapp:checkout'%}" target="_self">Checkout</a>
           </li>
+       {% else %}
+<li class="nav-item">
+	<a class="nav-link waves-effect" href="{% url 'coreapp:order-summary' %}">
+		<span class="badge red z-depth-1 mr-1">{{ request|cart_item_count }}</span>
+		<i class="fas fa-shopping-cart"></i>
+		<span class="clearfix d-none d-sm-inline-block"> Cart </span>
+	</a>
+</li>
+        {% endif %}
           <li class="nav-item">
             <a class="nav-link waves-effect" href="{% url 'about'%}">About
               <span class="sr-only">(current)</span>
