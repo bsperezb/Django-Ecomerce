@@ -1,3 +1,4 @@
+import json
 import random
 import string
 
@@ -43,7 +44,6 @@ def get_status_by_id(id):
 
 
 def get_reference_by_id(id):
-
     url = "http://sandbox.wompi.co/v1/transactions/"
     url += id
     try:
@@ -55,7 +55,6 @@ def get_reference_by_id(id):
 
 
 def get_amount_by_id(id):
-
     url = "http://sandbox.wompi.co/v1/transactions/"
     url += id
     try:
@@ -66,8 +65,29 @@ def get_amount_by_id(id):
         return "Id doesn't exist"
 
 
-def random_reference():
+def get_payment(request):
+    import ipdb
 
+    ipdb.set_trace()
+    resp_unicode = request.body.decode("utf-8")
+    resp_json = json.loads(resp_unicode)
+    id = resp_json["data"]["transaction"]["id"]
+    status = resp_json["data"]["transaction"]["status"]
+    reference = resp_json["data"]["transaction"]["reference"]
+    amount = resp_json["data"]["transaction"]["amount_in_cents"]
+    payment_data = {
+        "id": id,
+        "status": status,
+        "reference": reference,
+        "amount": amount,
+    }
+    # TODO Verificar Paymen encrypted
+    # https://docs.wompi.co/docs/en/eventos
+    return payment_data
+    # print(resp_json)
+
+
+def random_reference():
     reference = "".join(random.choices(string.ascii_uppercase + string.digits, k=12))
     try:
         reference_db = Order.objects.get(ordered=True, reference=reference)

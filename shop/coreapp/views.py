@@ -2,8 +2,10 @@ from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.core.exceptions import ObjectDoesNotExist
+from django.http import HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
+from django.views.decorators.csrf import csrf_exempt
 from django.views.generic import DetailView, ListView
 from django.views.generic.base import View
 
@@ -14,6 +16,7 @@ from .forms import CheckoutForm, CouponForm, RefundForm
 from .models import Address, Coupon, Item, Order, OrderItem, Payment, Refund, Session
 from .payment import (
     get_amount_by_id,
+    get_payment,
     get_reference_by_id,
     get_status_by_id,
     random_reference,
@@ -280,52 +283,56 @@ def payment_redirect(request):
     status = get_status_by_id(id)
     reference = get_reference_by_id(id)
     amount = get_amount_by_id(id)
-    order = Order.objects.get(user=request.user, ordered=False, reference=reference)
-    # billing_address verification
     try:
-        billing_address = Address.objects.filter(user=request.user)[0]
+        order = Order.objects.get(user=request.user, ordered=False, reference=reference)
+        # billing_address verification
+        try:
+            billing_address = Address.objects.filter(user=request.user)[0]
+        except ObjectDoesNotExist:
+            messages.warning(request, "Your may add a billing addres")
+            return redirect("coreapp:checkout")
+
+        if status == "APPROVED":
+            # create payment
+            payment = Payment()
+            payment.wompi_id = id
+            payment.user = request.user
+            payment.amount = amount / 100
+            # payment.reference = reference
+            payment.save()
+
+            order_items = order.items.all()
+            order_items.update(ordered=True)
+            for item in order_items:
+                item.save()
+
+            order.billing_address = billing_address
+            order.ordered = True
+            order.payment = payment
+            order.reference = reference
+            order.save()
+
+            messages.success(
+                request,
+                f"Your order was Successful! \nthis is your payment reference: {reference}",
+            )
+
+            return redirect("coreapp:home")
+
+        elif status == "DECLINED":
+            messages.warning(request, "Your payment was Declined!")
+            return redirect("coreapp:order-summary")
+        elif status == "VOIDED":
+            messages.warning(request, "Your order was Voided!")
+            return redirect("coreapp:order-summary")
+        else:
+            messages.warning(
+                request,
+                "Something was wrong, if the problem persists please contact us",
+            )
+            return redirect("coreapp:order-summary")
     except ObjectDoesNotExist:
-        messages.warning(request, "Your may add a billing addres")
-        return redirect("coreapp:checkout")
-
-    if status == "APPROVED":
-        # create payment
-        payment = Payment()
-        payment.wompi_id = id
-        payment.user = request.user
-        payment.amount = amount / 100
-        # payment.reference = reference
-        payment.save()
-
-        order_items = order.items.all()
-        order_items.update(ordered=True)
-        for item in order_items:
-            item.save()
-
-        order.billing_address = billing_address
-        order.ordered = True
-        order.payment = payment
-        order.reference = reference
-        order.save()
-
-        messages.success(
-            request,
-            f"Your order was Successful! \nthis is your payment reference: {reference}",
-        )
-
         return redirect("coreapp:home")
-
-    elif status == "DECLINED":
-        messages.warning(request, "Your payment was Declined!")
-        return redirect("coreapp:order-summary")
-    elif status == "VOIDED":
-        messages.warning(request, "Your order was Voided!")
-        return redirect("coreapp:order-summary")
-    else:
-        messages.warning(
-            request, "Something was wrong, if the problem persists please contact us"
-        )
-        return redirect("coreapp:order-summary")
 
 
 def add_to_cart(request, slug):
@@ -593,3 +600,48 @@ def setting_account_order(request):
         # there is no a objects in session
         pass
     return redirect("coreapp:home")
+
+
+@csrf_exempt
+def Listen_payment_report(request):
+    if request.method == "POST":
+        import ipdb
+
+        ipdb.set_trace()
+
+        payment_data = get_payment(request)
+        import ipdb
+
+        ipdb.set_trace()
+
+        id = payment_data["id"]
+        status = payment_data["status"]
+        reference = payment_data["reference"]
+        amount = payment_data["amount"]
+
+        if not Order.objects.filter(ordered=True, reference=reference).exists():
+            order = Order.objects.get(ordered=False, reference=reference)
+            user = order.user
+            billing_address = Address.objects.filter(user=user)[0]
+
+            if status == "APPROVED":
+                # create payment
+                payment = Payment()
+                payment.wompi_id = id
+                payment.user = user
+                payment.amount = amount / 100
+                # payment.reference = reference
+                payment.save()
+
+                order_items = order.items.all()
+                order_items.update(ordered=True)
+                for item in order_items:
+                    item.save()
+
+                order.billing_address = billing_address
+                order.ordered = True
+                order.payment = payment
+                order.reference = reference
+                order.save()
+
+        return HttpResponse(status=200)

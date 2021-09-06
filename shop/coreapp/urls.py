@@ -5,6 +5,7 @@ from .views import (
     CheckoutView,
     HomeView,
     ItemDetailView,
+    Listen_payment_report,
     OrderSummaryView,
     PaymentView,
     RequestRefundView,
@@ -34,5 +35,6 @@ urlpatterns = [
     path("add-coupon/", AddCouponView.as_view(), name="add-coupon"),
     path("request-refund/", RequestRefundView.as_view(), name="request-refund"),
     path("setting-account-order/", setting_account_order, name="setting-account-order"),
+    path("Listen-payment-report/", Listen_payment_report, name="Listen-payment-report"),
     # path('payment/<payment_option>', PaymentView.as_view(), name='payment')
 ]
